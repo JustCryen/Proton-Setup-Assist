@@ -1,6 +1,6 @@
 # Launchers-for-Steam-Proton
- Shellscript made to automate third party launcher instalations for Steam Proton games.
- 
+ Shell script made to simplify the installation process of Steam games that require third party launchers.
+
 # Unfinished
  This is a work in progress project
  This shellscript also assumes that your main steamapps folder is in `~/.steam/steam/steamapps` 
