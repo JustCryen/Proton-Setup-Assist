@@ -6,8 +6,9 @@ echo -e "Third party launcher install script for Proton.\n"
 ### Game selection
 
 read -p 'Choose a game you wish to instal a launcher to: ' game_choice
-
-protontricks -s $game_choice | head -n -4
+if [ ! -z "$game_choice" ]; then
+  protontricks -s $game_choice | head -n -4
+fi
 
 read -p 'Insert a valid APPID: ' appid
 echo "~/.steam/steam/steamapps/compatdata/$appid"
@@ -18,6 +19,22 @@ if ! [[ $appid =~ $re ]] ; then
 elif [ ! -d ~/.steam/steam/steamapps/compatdata/$appid ]; then
   echo "error: Wrong path to game prefix" >&2; exit 1
 fi
+
+
+### Clear prefix
+
+echo ""
+read -p "Clear prefix? [y/N]: " clear_prefix
+
+case "$clear_prefix" in
+ [yY] | [yY][eE][sS])
+    rm -r  "$HOME/.steam/steam/steamapps/compatdata/$appid"
+    echo -e "Prefix cleared \nGo and run a game at least once to create it again"
+    exit 0
+    ;;
+ [nN] | [nN][oO] | *)
+    ;;
+esac
 
 
 ### Proton selection
@@ -71,6 +88,7 @@ game=`find ~/.steam/steam/steamapps/ -maxdepth 1 -type f -name '*.acf' -exec awk
 dir=$(pwd)
 echo -e "\nSummary:"
 echo "Game: $game"
+echo "APPID: $appid"
 echo "Proton: ${proton_version##*/}"
 case $exe_choice in
   1)
@@ -84,7 +102,7 @@ case $exe_choice in
 esac
 echo "Current dir: $dir"
 
-read -p "Proceed installation? y/N: " final_selectiton
+read -p "Proceed installation? [y/N]: " final_selectiton
 case "$final_selectiton" in
  [yY] | [yY][eE][sS])
     echo "Installing"
@@ -104,22 +122,23 @@ fi
 case "$exe_choice" in
 
   1)	#Origin
-    if [ ! -f "$dir/files/OriginSetup.exe" ]; then			#keeps downloading over and over again
+    exe="$dir/files/OriginSetup.exe"
+    if [ ! -f "$exe" ]; then			#keeps downloading over and over again
       cd files
       wget https://download.dm.origin.com/origin/live/OriginSetup.exe
-      exe="$dir/files/OriginSetup.exe"
-    else
-      exe="$dir/files/OriginSetup.exe"
     fi
     ;;
 
   2)	#Ubisoft
-    if [ ! -f "$dir/files/UbisoftConnectInstaller.exe" ]; then
+    exe="$dir/files/UbisoftConnectInstaller.exe"
+    old_launcher="$HOME/.steam/steam/steamapps/compatdata/375900/pfx/drive_c/Program Files (x86)/Ubisoft/Ubisoft Game Launcher/"
+    if [ -d $old_launcher ] ;then
+    rm -r $old_launcher
+    echo "Removed old Ubisoft Game Launcher directory"
+    fi
+    if [ ! -f "$exe" ]; then
       cd files
       wget https://ubistatic3-a.akamaihd.net/orbit/launcher_installer/UbisoftConnectInstaller.exe
-      exe="$dir/files/UbisoftConnectInstaller.exe"
-    else
-      exe="$dir/files/UbisoftConnectInstaller.exe"
     fi
     ;;
 
@@ -134,4 +153,4 @@ esac
 
 echo "File found: $exe"
 
-#STEAM_COMPAT_DATA_PATH="~/.steam/steam/steamapps/compatdata/$appid" WINEPREFIX="~/.steam/steam/steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $exe
+STEAM_COMPAT_DATA_PATH="$HOME/.steam/steam/steamapps/compatdata/$appid" WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $exe
