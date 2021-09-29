@@ -15,8 +15,8 @@ echo "~/.steam/steam/steamapps/compatdata/$appid"
 
 re='^[0-9]+$'
 if ! [[ $appid =~ $re ]] ; then
-   echo "error: Not a valid number" >&2; exit 1
-elif [ ! -d ~/.steam/steam/steamapps/compatdata/$appid ]; then
+  echo "error: Not a valid number" >&2; exit 1
+  elif [ ! -d ~/.steam/steam/steamapps/compatdata/$appid ]; then
   echo "error: Wrong path to game prefix" >&2; exit 1
 fi
 
@@ -56,9 +56,9 @@ read -p 'Pick proton version by index: ' proton_choice
 
 #re='^[0-9]+$'
 if ! [[ $proton_choice =~ $re ]] ; then
-   echo "error: Not a valid number" >&2; exit 1
-elif [ $proton_choice -ge $version_count ] ; then
-   echo "error: Not a valid number" >&2; exit 1
+  echo "error: Not a valid number" >&2; exit 1
+  elif [ $proton_choice -ge $version_count ] ; then
+  echo "error: Not a valid number" >&2; exit 1
 fi
 
 idx=0
@@ -81,6 +81,10 @@ echo -e "\nChoose a third party launcher for installation:\n\
 3. Games for Windows Live"
 read -p "Pick a launcher by index: " exe_choice						#add a selection filter
 
+if ! [[ $exe_choice =~ $re ]] ; then
+   echo "error: Not a valid number" >&2; exit 1
+fi
+
 
 ### Summmary:
 
@@ -99,16 +103,18 @@ case $exe_choice in
     ;;
   3)
     echo Launcher: GFWL
+    echo -e "\nWARNING: the download link for Games for Windows Live is community contributed (not official)" 
+    echo -e "You'd need to source it by yourself \nhttps://community.pcgamingwiki.com/files/file/1012-microsoft-games-for-windows-live/"
+    echo "Place the zip in $dir/files/"
 esac
-echo "Current dir: $dir"
+echo -e "Current dir: $dir\n"
 
-read -p "Proceed installation? [y/N]: " final_selectiton
+read -p "Proceed with installation? [y/N]: " final_selectiton
 case "$final_selectiton" in
  [yY] | [yY][eE][sS])
-    echo "Installing"
     ;;
  [nN] | [nN][oO] | *)
-    echo "error: Aborted by user" >&2; exit 1
+    echo -e "\nerror: Aborted by user" >&2; exit 1
     ;;
 esac
 
@@ -123,7 +129,7 @@ case "$exe_choice" in
 
   1)	#Origin
     exe="$dir/files/OriginSetup.exe"
-    if [ ! -f "$exe" ]; then			#keeps downloading over and over again
+    if [ ! -f "$exe" ]; then
       cd files
       wget https://download.dm.origin.com/origin/live/OriginSetup.exe
     fi
@@ -131,10 +137,10 @@ case "$exe_choice" in
 
   2)	#Ubisoft
     exe="$dir/files/UbisoftConnectInstaller.exe"
-    old_launcher="$HOME/.steam/steam/steamapps/compatdata/375900/pfx/drive_c/Program Files (x86)/Ubisoft/Ubisoft Game Launcher/"
+    old_launcher="$HOME/.steam/steam/steamapps/compatdata/$appid/pfx/drive_c/Program Files (x86)/Ubisoft/Ubisoft Game Launcher/"
     if [ -d $old_launcher ] ;then
-    rm -r $old_launcher
-    echo "Removed old Ubisoft Game Launcher directory"
+      rm -r $old_launcher
+      echo "Removed old Ubisoft Game Launcher directory"
     fi
     if [ ! -f "$exe" ]; then
       cd files
@@ -143,7 +149,22 @@ case "$exe_choice" in
     ;;
 
   3)	#GFWL
-    exe="~/Executables/gfwlivesetup.exe"
+    exe="$dir/files/gfwlivesetup.exe"
+    msi1="$dir/files/xliveredist.msi"
+    msi2="$dir/files/gfwlclient.msi"
+    #old_launcher="$HOME/.steam/steam/steamapps/compatdata/$appid/pfx/drive_c/Program Files (x86)/"
+    if [ ! -f "$exe" ]; then
+      if [ -f "$dir/files/gfwlivesetup.zip" ]; then
+      cd files
+      unzip gfwlivesetup.zip
+      else
+      echo -e "\nPlease provide a gfwlivesetup.zip or gfwlivesetup.exe file."
+      fi
+    fi
+    #if [ -d $old_launcher ] ;then
+      #rm -r $old_launcher
+      #echo "Removed old Ubisoft Game Launcher directory"
+    #fi
     ;;
 
   *)
@@ -151,6 +172,30 @@ case "$exe_choice" in
     ;;
 esac
 
-echo "File found: $exe"
+if [ -f "$exe" ]; then
+  echo "File found: $exe"
+  echo -e "\nInstalling"
+  else 
+  echo "error: couldn't find the installer" >&2; exit 1
+fi
 
-STEAM_COMPAT_DATA_PATH="$HOME/.steam/steam/steamapps/compatdata/$appid" WINEPREFIX="$HOME/.steam/steam/steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $exe
+compatdata="$HOME/.steam/steam/steamapps/compatdata"
+
+if [[ $exe_choice =~ 3 ]]; then
+  protontricks $appid dotnet45
+  echo -e "\ndotnet45 installed."
+  #read -p "Press enter to continue installation. " agreement
+  protontricks $appid d3dx9
+  echo -e "\nd3dx9 installed."
+  #read -p "Press enter to continue installation. " agreement
+  STEAM_COMPAT_DATA_PATH="$compatdata/$appid" WINEPREFIX="$compatdata/$appid/pfx" "$proton_version/proton" run $msi1
+  echo -e "\nxliveredist.msi installed."
+  #read -p "Press enter to continue installation. " agreement
+  STEAM_COMPAT_DATA_PATH="$compatdata/$appid" WINEPREFIX="$compatdata/$appid/pfx" "$proton_version/proton" run $msi2
+  echo -e "\ngfwlclient.msi installed."
+                                                                                                                          # ADD Physics Installer
+  protontricks $appid win7
+fi
+STEAM_COMPAT_DATA_PATH="$compatdata/$appid" WINEPREFIX="$compatdata/$appid/pfx" "$proton_version/proton" run $exe
+
+echo -e "\nInstall complete!"
