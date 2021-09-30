@@ -5,8 +5,11 @@
  This shellscript also assumes that your main steamapps folder is in `~/.steam/steam/steamapps` 
  
 ### Features
-- Origin instalation
-- Ubisoft Connect instalation
-- probably a Games for Windows Live instalation:w
+- Origin installation
+- Ubisoft Connect installation
+- Games for Windows Live installation (requires a manual download)
 
+### Dependencies
 
+- sed and awk (for now)
+- protontricks
