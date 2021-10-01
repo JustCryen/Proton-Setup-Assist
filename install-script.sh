@@ -1,6 +1,23 @@
 #!/bin/bash
 
-echo -e "Third party launcher install script for Proton.\n"
+echo -e "Third party launcher install script for Proton.\n" #Created by Cryen / github.com/JustCryen
+
+
+### Find steam location
+
+if [ -d $HOME/.local/steam/steamapps ] ; then
+  steam_dir="$HOME/.local/steam"
+  elif [ -d $HOME/.steam ] ; then
+    if [ -L $HOME/.steam/steam ] ; then
+      steam_dir=$(readlink -f $HOME/.steam/steam/)
+      elif [ -d $HOME/.steam/steam/steamapps ] ; then
+        steam_dir="$HOME/.steam/steam"
+      elif [ -d $HOME/.steam/steamapps ] ; then
+        steam_dir="$HOME/.steam"
+      else
+        echo "Couldn't find Steam dir"  >&2; exit 1
+    fi
+fi
 
 
 ### Game selection
@@ -11,28 +28,49 @@ if [ ! -z "$game_choice" ]; then
 fi
 
 read -p 'Insert a valid APPID: ' appid
-echo "~/.steam/steam/steamapps/compatdata/$appid"
 
 re='^[0-9]+$'
 if ! [[ $appid =~ $re ]] ; then
   echo "error: Not a valid number" >&2; exit 1
-  elif [ ! -d ~/.steam/steam/steamapps/compatdata/$appid ]; then
+fi
+
+found_libs=`grep path $steam_dir/steamapps/libraryfolders.vdf | sed -e 's/\t\t//g' -e 's/path//' -e 's/"//g'`
+
+for steam in ${found_libs[@]}; do
+  game_check=`find ${steam}/steamapps/ -maxdepth 1 -type f -name '*.acf' -exec awk -F '"' '/"appid|name/{ printf $4 "|" } END { print "" }' {} \; | column -t -s '|' | grep -w $appid`
+  game_name=`echo $game_check | sed 's/^\w*\ *//'`
+  game_id=`echo $game_check | grep -o '^\S*'`
+  if [[ $game_id =~ $appid ]]; then
+    game=$game_name
+    working_lib=${steam}
+  fi
+done
+
+steamapps=$working_lib/steamapps
+
+if [ -d $steamapps/compatdata/$appid ] ; then
+  echo -e "$steamapps/compatdata/$appid\n"
+  else
   echo "error: Wrong path to game prefix" >&2; exit 1
 fi
+
+#for list_libs in ${found_libs[@]}; do                     # neat listing of found libraries
+#  echo ${list_libs}
+#done
 
 
 ### Clear prefix
 
-echo ""
+#echo ""
 read -p "Clear prefix? [y/N]: " clear_prefix
 
 case "$clear_prefix" in
  [yY] | [yY][eE][sS])
-    rm -r  "$HOME/.steam/steam/steamapps/compatdata/$appid"
-    echo -e "Prefix cleared \nGo and run a game at least once to create it again"
-    exit 0
+    rm -r  "$steamapps/compatdata/$appid"
+    echo -e "Prefix cleared \nGo and run a game at least once to create it again"; exit 0
     ;;
  [nN] | [nN][oO] | *)
+    echo Ignored
     ;;
 esac
 
@@ -41,7 +79,7 @@ esac
 
 echo -e "\nChoose a Proton version used for configuration:"
 
-versions_directory=~/.steam/steam/compatibilitytools.d
+versions_directory=$steam_dir/compatibilitytools.d
 if [ ! -d "$versions_directory" ]; then
   echo "error: No path to proton versions" >&2; exit 1
 fi
@@ -54,7 +92,6 @@ done
 
 read -p 'Pick proton version by index: ' proton_choice
 
-#re='^[0-9]+$'
 if ! [[ $proton_choice =~ $re ]] ; then
   echo "error: Not a valid number" >&2; exit 1
   elif [ $proton_choice -ge $version_count ] ; then
@@ -78,7 +115,8 @@ echo "Picked version is: ${proton_version##*/}"
 echo -e "\nChoose a third party launcher for installation:\n\
 1. Origin\n\
 2. Ubisoft Connect\n\
-3. Games for Windows Live"
+3. Games for Windows Live\n\
+4. Custom file location"
 read -p "Pick a launcher by index: " exe_choice						#add a selection filter
 
 if ! [[ $exe_choice =~ $re ]] ; then
@@ -88,7 +126,6 @@ fi
 
 ### Summmary:
 
-game=`find ~/.steam/steam/steamapps/ -maxdepth 1 -type f -name '*.acf' -exec awk -F '"' '/"appid|name/{ printf $4 "|" } END { print "" }' {} \; | column -t -s '|' | grep -w $appid | sed -e 's/^\w*\ *//'`
 dir=$(pwd)
 echo -e "\nSummary:"
 echo "Game: $game"
@@ -106,6 +143,9 @@ case $exe_choice in
     echo -e "\nWARNING: the download link for Games for Windows Live is community contributed (not official)" 
     echo -e "You'd need to source it by yourself \nhttps://community.pcgamingwiki.com/files/file/1012-microsoft-games-for-windows-live/"
     echo "Place the zip in $dir/files/"
+    ;;
+  4)
+    echo Launcher: Custom
 esac
 echo -e "Current dir: $dir\n"
 
@@ -137,7 +177,7 @@ case "$exe_choice" in
 
   2)	#Ubisoft
     exe="$dir/files/UbisoftConnectInstaller.exe"
-    old_launcher="$HOME/.steam/steam/steamapps/compatdata/$appid/pfx/drive_c/Program Files (x86)/Ubisoft/Ubisoft Game Launcher/"
+    old_launcher="$steamapps/compatdata/$appid/pfx/drive_c/Program Files (x86)/Ubisoft/Ubisoft Game Launcher/"
     if [ -d $old_launcher ] ;then
       rm -r $old_launcher
       echo "Removed old Ubisoft Game Launcher directory"
@@ -152,7 +192,6 @@ case "$exe_choice" in
     exe="$dir/files/gfwlivesetup.exe"
     msi1="$dir/files/xliveredist.msi"
     msi2="$dir/files/gfwlclient.msi"
-    #old_launcher="$HOME/.steam/steam/steamapps/compatdata/$appid/pfx/drive_c/Program Files (x86)/"
     if [ ! -f "$exe" ]; then
       if [ -f "$dir/files/gfwlivesetup.zip" ]; then
       cd files
@@ -161,10 +200,13 @@ case "$exe_choice" in
       echo -e "\nPlease provide a gfwlivesetup.zip or gfwlivesetup.exe file."
       fi
     fi
-    #if [ -d $old_launcher ] ;then
+    #if [ -d $old_launcher ] ;then                                                                                      #Add old launcher deletion
       #rm -r $old_launcher
-      #echo "Removed old Ubisoft Game Launcher directory"
     #fi
+    ;;
+
+  4)
+    read -p "Provide a full path to the custom file: " exe
     ;;
 
   *)
@@ -179,8 +221,6 @@ if [ -f "$exe" ]; then
   echo "error: couldn't find the installer" >&2; exit 1
 fi
 
-compatdata="$HOME/.steam/steam/steamapps/compatdata"
-
 if [[ $exe_choice =~ 3 ]]; then
   protontricks $appid dotnet45
   echo -e "\ndotnet45 installed."
@@ -188,14 +228,15 @@ if [[ $exe_choice =~ 3 ]]; then
   protontricks $appid d3dx9
   echo -e "\nd3dx9 installed."
   #read -p "Press enter to continue installation. " agreement
-  STEAM_COMPAT_DATA_PATH="$compatdata/$appid" WINEPREFIX="$compatdata/$appid/pfx" "$proton_version/proton" run $msi1
+  STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $msi1
   echo -e "\nxliveredist.msi installed."
   #read -p "Press enter to continue installation. " agreement
-  STEAM_COMPAT_DATA_PATH="$compatdata/$appid" WINEPREFIX="$compatdata/$appid/pfx" "$proton_version/proton" run $msi2
+  STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $msi2
   echo -e "\ngfwlclient.msi installed."
                                                                                                                           # ADD Physics Installer
+  STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$proton_version/proton" run /home/cryen/Executables/newTRON/PhysX-9.19.0218.exe
   protontricks $appid win7
 fi
-STEAM_COMPAT_DATA_PATH="$compatdata/$appid" WINEPREFIX="$compatdata/$appid/pfx" "$proton_version/proton" run $exe
+STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $exe
 
 echo -e "\nInstall complete!"
