@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo -e "Third party launcher install script for Proton.\n" #Created by Cryen / github.com/JustCryen
-
+dir=$(pwd)
 
 ### Find steam location
 
@@ -132,7 +132,6 @@ fi
 
 ### Summmary:
 
-dir=$(pwd)
 echo -e "\nSummary:"
 echo "Game: $game"
 echo "APPID: $appid"

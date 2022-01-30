@@ -14,3 +14,10 @@
 
 - sed and awk (for now)
 - protontricks
+
+### Todo
+
+- Save last used configuration
+- Load last used configuration
+- Get a Physx installer for GFWL
+
