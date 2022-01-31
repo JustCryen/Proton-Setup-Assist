@@ -23,7 +23,7 @@ echo -e "Steam location \n$steam_dir\n"
 ### Game selection
 
 history -c
-read -ep 'Choose a game you wish to instal a launcher to: ' game_choice
+read -ep 'Serch for a game (protontricks): ' game_choice
 if [ ! -z "$game_choice" ]; then
   protontricks -s $game_choice | head -n -4
 fi
@@ -173,10 +173,12 @@ fi
 case "$exe_choice" in
 
   1)	#Origin
-    exe="$dir/files/OriginSetup.exe"
+    #exe="$dir/files/OriginSetup.exe"
+    exe="$dir/files/OriginThinSetup.exe"
     if [ ! -f "$exe" ]; then
-      cd files
-      wget https://download.dm.origin.com/origin/live/OriginSetup.exe
+      cd $dir/files
+      #wget https://download.dm.origin.com/origin/live/OriginSetup.exe
+      wget https://origin-a.akamaihd.net/Origin-Client-Download/origin/live/OriginThinSetup.exe
     fi
     ;;
 
@@ -188,7 +190,7 @@ case "$exe_choice" in
       echo "Removed old Ubisoft Game Launcher directory"
     fi
     if [ ! -f "$exe" ]; then
-      cd files
+      cd $dir/files
       wget https://ubistatic3-a.akamaihd.net/orbit/launcher_installer/UbisoftConnectInstaller.exe
     fi
     ;;
@@ -199,7 +201,7 @@ case "$exe_choice" in
     msi2="$dir/files/gfwlclient.msi"
     if [ ! -f "$exe" ]; then
       if [ -f "$dir/files/gfwlivesetup.zip" ]; then
-      cd files
+      cd $dir/files
       unzip gfwlivesetup.zip
       else
       echo -e "\nPlease provide a gfwlivesetup.zip or gfwlivesetup.exe file."
