@@ -62,6 +62,7 @@ fi
 
 cd /
 read -ep "Where's your Origin wine bubble located?:" wineorigin
+wineorigin = `echo $wineorigin | sed 's/\/\//\//'`
 # or wineorigin = "$HOME/Games/.wineOrigin"
 
 # Program Files (x86) Origin
