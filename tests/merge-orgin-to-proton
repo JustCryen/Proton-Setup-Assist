@@ -60,9 +60,15 @@ if [ -d $steamapps/compatdata/$appid ] ; then
   echo -e "\nerror: Wrong path to game prefix" >&2; exit 1
 fi
 
+# Origin wine bubble location
+
 cd /
-read -ep "Where's your Origin wine bubble located?:" wineorigin
-wineorigin = `echo $wineorigin | sed 's/\/\//\//'`
+read -ep "Where's your Origin wine bubble located?: " wineorigin
+if [[ `echo $wineorigin | sed 's/\(^.*\)\(.$\)/\2/'` == '/' ]] ; then
+  wineorigin = `echo $wineorigin | sed 's/.$//'`
+fi
+echo -e "\n"
+
 # or wineorigin = "$HOME/Games/.wineOrigin"
 
 # Program Files (x86) Origin
