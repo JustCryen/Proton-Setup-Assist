@@ -1,0 +1,111 @@
+#!/bin/bash
+
+# if not working try steamapps="$HOME/.steam/steam/steamapps"
+
+### Find steam location
+
+if [ -d $HOME/.local/steam/steamapps ] ; then
+  steam_dir="$HOME/.local/steam"
+  elif [ -d $HOME/.steam ] ; then
+    if [ -L $HOME/.steam/steam ] ; then
+      steam_dir=$(readlink -f $HOME/.steam/steam/)
+      elif [ -d $HOME/.steam/steam/steamapps ] ; then
+        steam_dir="$HOME/.steam/steam"
+      elif [ -d $HOME/.steam/steamapps ] ; then
+        steam_dir="$HOME/.steam"
+      else
+        echo "Couldn't find Steam dir"  >&2; exit 1
+    fi
+fi
+echo -e "Steam location \n$steam_dir\n"
+
+### Game selection
+
+history -c
+read -ep 'Serch for a game (protontricks): ' game_choice
+if [ ! -z "$game_choice" ]; then
+  protontricks -s $game_choice | head -n -4
+fi
+
+echo 'Psst, BF3 has (1238820)'
+cd $steam_dir/steamapps/compatdata
+read -ep 'Insert a valid APPID: ' appid
+
+re='^[0-9]+$'
+if ! [[ $appid =~ $re ]] ; then
+  appid=`echo $appid | sed 's/.$//'`
+  if ! [[ $appid =~ $re ]] ; then
+    echo "error: Not a valid number" >&2; exit 1
+  fi
+fi
+
+found_libs=`grep path $steam_dir/steamapps/libraryfolders.vdf | sed -e 's/\t\t//g' -e 's/path//' -e 's/"//g'`
+echo -e "\nFound libraries \n$found_libs\n"
+
+for steam in ${found_libs[@]}; do
+  game_check=`find ${steam}/steamapps/ -maxdepth 1 -type f -name '*.acf' -exec awk -F '"' '/"appid|name/{ printf $4 "|" } END { print "" }' {} \; | column -t -s '|' | grep -w $appid`
+  game_name=`echo $game_check | sed 's/^\w*\ *//'`
+  game_id=`echo $game_check | grep -o '^\S*'`
+  if [[ $game_id =~ $appid ]]; then
+    game=$game_name
+    working_lib=${steam}
+  fi
+done
+
+steamapps=$working_lib/steamapps
+
+if [ -d $steamapps/compatdata/$appid ] ; then
+  echo -e "$steamapps/compatdata/$appid\n"
+  else
+  echo -e "\nerror: Wrong path to game prefix" >&2; exit 1
+fi
+
+cd /
+read -ep "Where's your Origin wine bubble located?:" wineorigin
+# or wineorigin = "$HOME/Games/.wineOrigin"
+
+# Program Files (x86) Origin
+
+rm -r "$steamapps/compatdata/$appid/pfx/drive_c/Program Files (x86)/Origin"
+ln -s "$wineorigin/drive_c/Program Files (x86)/Origin" "$steamapps/compatdata/$appid/pfx/drive_c/Program Files (x86)/Origin"
+
+# Program Files (x86) Origin Games
+
+#rm -r "$steamapps/compatdata/1238820/pfx/drive_c/Program Files (x86)/Origin Games"
+#ln -s "$wineorigin/drive_c/Program Files (x86)/Origin Games" "$steamapps/compatdata/1238820/pfx/drive_c/Program Files (x86)/Origin Games"
+
+# Application Data Origin
+
+rm -r "$steamapps/compatdata/$appid/pfx/drive_c/users/steamuser/Application Data/Origin"
+ln -s "$wineorigin/drive_c/users/$USER/Application Data/Origin" "$steamapps/compatdata/$appid/pfx/drive_c/users/steamuser/Application Data/Origin"
+
+# ProgramData Origin
+
+rm -r "$steamapps/compatdata/$appid/pfx/drive_c/ProgramData/Origin"
+ln -s "$wineorigin/drive_c/ProgramData/Origin" "$steamapps/compatdata/$appid/pfx/drive_c/ProgramData/Origin"
+
+# Local Settings Application Data Origin
+
+rm -r "$steamapps/compatdata/$appid/pfx/drive_c/users/steamuser/Local Settings/Application Data/Origin"
+ln -s "$wineorigin/drive_c/users/$USER/Local Settings/Application Data/Origin" "$steamapps/compatdata/$appid/pfx/drive_c/users/steamuser/Local Settings/Application Data/Origin"
+
+mkdir "$wineorigin/drive_c/users/$USER/AppData/Local"
+mkdir "$wineorigin/drive_c/users/$USER/AppData/Local/Origin"
+mkdir "$wineorigin/drive_c/users/$USER/AppData/Roaming"
+mkdir "$wineorigin/drive_c/users/$USER/AppData/Roaming/Origin"
+
+rm -r "$steamapps/compatdata/$appid/pfx/drive_c/users/steamuser/AppData/Local/Origin"
+rm -r "$steamapps/compatdata/$appid/pfx/drive_c/users/steamuser/AppData/Roaming/Origin"
+
+ln -s "$wineorigin/drive_c/users/$USER/AppData/Local/Origin" "$steamapps/compatdata/$appid/pfx/drive_c/users/steamuser/AppData/Local/Origin"
+ln -s "$wineorigin/drive_c/users/$USER/AppData/Roaming/Origin" "$steamapps/compatdata/$appid/pfx/drive_c/users/steamuser/AppData/Roaming/Origin"
+
+#./users/steamuser/AppData/Local/Origin
+#./users/steamuser/AppData/Roaming/Origin
+
+#./Program Files (x86)/Steam/
+
+ln -s "$steamapps/compatdata/$appid/pfx/drive_c/Program Files (x86)/Steam" "$wineorigin/drive_c/Program Files (x86)/Steam"
+
+rm -r "$steamapps/compatdata/$appid/pfx/drive_c/ProgramData/Electronic Arts"
+ln -s "$wineorigin/drive_c/ProgramData/Electronic Arts" "$steamapps/compatdata/$appid/pfx/drive_c/ProgramData/Electronic Arts"
