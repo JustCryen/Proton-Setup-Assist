@@ -55,7 +55,8 @@ done
 steamapps=$working_lib/steamapps
 
 if [ -d $steamapps/compatdata/$appid ] ; then
-  echo -e "$steamapps/compatdata/$appid\n"
+  echo -e "Choosen library with prefix: $steamapps/compatdata/$appid\n"
+  WINEPREFIX="$steamapps/compatdata/$appid/pfx"
   else
   echo -e "\nerror: Wrong path to game prefix" >&2; exit 1
 fi
@@ -83,38 +84,46 @@ esac
 
 ### Proton selection
 
-echo -e "\nChoose a Proton version used for configuration:"
-
-versions_directory=$steam_dir/compatibilitytools.d
-if [ ! -d "$versions_directory" ]; then
-  echo "error: No path to proton versions" >&2; exit 1
-fi
-versions="$versions_directory/*"
-version_count=0
-for proton_version in ${versions[@]}; do
-  echo "$version_count. ${proton_version##*/}"
-  version_count=$((version_count+1))
-done
-
-read -p 'Pick proton version by index: ' proton_choice
-
-if ! [[ $proton_choice =~ $re ]] ; then
-  echo "error: Not a valid number" >&2; exit 1
-  elif [ $proton_choice -ge $version_count ] ; then
-  echo "error: Not a valid number" >&2; exit 1
+if [ -f "$WINEPREFIX/../version" ]; then
+	#proton_version=$(cat "$WINEPREFIX/../version")	# Auto selection (not yet checked)
+  #proton_version=$steam_dir/compatibilitytools.d/Proton-$(cat "$WINEPREFIX/../version")                           ###########
+  proton_version=$steam_dir/compatibilitytools.d/$(cat "$WINEPREFIX/../version")
 fi
 
-idx=0
-for version in ${versions[@]}; do
-  if (( $idx == $proton_choice )); then
-    proton_version=$version
-    break
+if [[ $proton_version == "" ]] || [[ $1 == "-p" ]]; then
+  echo -e "\nChoose a Proton version used for configuration:"
+
+  versions_directory=$steam_dir/compatibilitytools.d
+  if [ ! -d "$versions_directory" ]; then
+    echo "error: No path to proton versions" >&2; exit 1
   fi
-  idx=$((idx+1))
-done
+  versions="$versions_directory/*"
+  version_count=0
+  for proton_version in ${versions[@]}; do
+    echo "$version_count. ${proton_version##*/}"
+    version_count=$((version_count+1))
+  done
 
-echo "Picked version is: ${proton_version##*/}"
+  read -p 'Pick proton version by index: ' proton_choice
 
+  if ! [[ $proton_choice =~ $re ]] ; then
+    echo "error: Not a valid number" >&2; exit 1
+    elif [ $proton_choice -ge $version_count ] ; then
+    echo "error: Not a valid number" >&2; exit 1
+  fi
+
+  idx=0
+  for version in ${versions[@]}; do
+    if (( $idx == $proton_choice )); then
+      proton_version=$version
+      break
+    fi
+    idx=$((idx+1))
+  done
+fi
+
+echo "\nProton version is: ${proton_version##*/}"
+#echo -e "\nProton version is: ${proton_version}"
 
 ### Launcher selection
 
@@ -130,7 +139,7 @@ if ! [[ $exe_choice =~ $re ]] ; then
 fi
 
 
-### Summmary:
+### Summary:
 
 echo -e "\nSummary:"
 echo "Game: $game"
@@ -229,25 +238,44 @@ if [ -f "$exe" ]; then
   echo "error: couldn't find the installer" >&2; exit 1
 fi
 
+#runner="$proton_version/proton"
+#runner="$proton_version/dist/bin/wine64"
+runner="$proton_version/files/bin/wine"    #for proton 7.9 and up
+STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" 
+
 if [[ $exe_choice =~ 3 ]]; then
-  protontricks $appid dotnet45
-  echo -e "\ndotnet45 installed."
+
+  #protontricks $appid dotnet45
+  #protontricks $appid dotnet40_kb2468871
+  #WINE=~/.local/share/Steam/compatibilitytools.d/GE-Proton7-10/files/bin/wine WINEPREFIX=~/.local/share/Steam/steamapps/compatdata/315440/pfx winetricks dotnet40_kb2468871
+  #echo -e "\ndotnet45 installed."
   #read -p "Press enter to continue installation. " agreement
+
+
   protontricks $appid d3dx9
   echo -e "\nd3dx9 installed."
-  #read -p "Press enter to continue installation. " agreement
+  read -p "Press enter to continue installation. " agreement
+
                                                                                                                             # ADD Physics Installer
-  #STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $dir/files/PhysX-9.14.0702.msi
-  #echo -e "\nPhysX installed."
+  protontricks $appid gfw
+  echo -e "\nGFW installed."
   read -p "Press enter to continue. " agreement
-  STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $msi1
-  echo -e "\nxliveredist.msi installed."
+
+  #STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$runner" run $dir/files/PhysX-9.14.0702.msi
+  #"$runner" run "$dir/files/PhysX-9.14.0702.msi"
+  protontricks $appid physx
+  echo -e "\nPhysX installed."
   read -p "Press enter to continue. " agreement
-  STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $msi2
-  echo -e "\ngfwlclient.msi installed."
-  read -p "Press enter to continue. " agreement
+
+  #"$runner" $msi1
+  #echo -e "\nxliveredist.msi installed."
+  #read -p "Press enter to continue. " agreement
+
+  #"$runner" $msi2
+  #echo -e "\ngfwlclient.msi installed."
+  #read -p "Press enter to continue. " agreement
 fi
-STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$proton_version/proton" run $exe
+"$runner" $exe
 
 if [[ $exe_choice =~ 3 ]]; then
   protontricks $appid win7

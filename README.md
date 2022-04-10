@@ -9,6 +9,7 @@
 - Ubisoft Connect installation
 - Games for Windows Live installation (requires a manual download)
 - Custom install option for anything you might want to install to an existing proton prefix.
+- Automatic Proton detection [ can be disabled by using the `-p` flag ]
 
 ### Dependencies
 
@@ -19,5 +20,4 @@
 
 - Save last used configuration
 - Load last used configuration
-- Get a Physx installer for GFWL
 
