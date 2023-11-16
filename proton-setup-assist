@@ -22,14 +22,18 @@ echo -e "Steam location \n$steam_dir\n"
 
 ### Game selection
 
-history -c
-read -ep 'Serch for a game (protontricks): ' game_choice
-if [ ! -z "$game_choice" ]; then
-  protontricks -s $game_choice | head -n -4
-fi
+if ! [[ $1 == "-i" ]]; then
+  history -c
+  read -ep 'Serch for a game (protontricks): ' game_choice
+  if [ ! -z "$game_choice" ]; then
+    protontricks -s $game_choice | head -n -4
+  fi
 
-cd $steam_dir/steamapps/compatdata
-read -ep 'Insert a valid APPID: ' appid
+  cd $steam_dir/steamapps/compatdata
+  read -ep 'Insert a valid APPID: ' appid
+else
+  appid="$2"
+fi
 
 re='^[0-9]+$'
 if ! [[ $appid =~ $re ]] ; then
@@ -53,6 +57,7 @@ for steam in ${found_libs[@]}; do
 done
 
 steamapps=$working_lib/steamapps
+protonpath=$working_lib/compatibilitytools.d/${proton_version##*/}
 
 if [ -d $steamapps/compatdata/$appid ] ; then
   echo -e "Choosen library with prefix: $steamapps/compatdata/$appid\n"
@@ -73,8 +78,12 @@ read -p "Clear prefix? [y/N]: " clear_prefix
 
 case "$clear_prefix" in
  [yY] | [yY][eE][sS])
-    rm -r  "$steamapps/compatdata/$appid"
-    echo -e "Prefix cleared \nGo and run a game at least once to create it again"; exit 0
+    rm -rf  "$steamapps/compatdata/$appid"
+    if [ -d "$steamapps/compatdata/$appid" ] ; then
+        echo -e "Error, prefix couldn't be cleared"; exit 0
+    else
+        echo -e "Prefix cleared \nGo and run a game at least once to create it again"; exit 0
+    fi
     ;;
  [nN] | [nN][oO] | *)
     echo Ignored
@@ -88,54 +97,112 @@ if [ -f "$WINEPREFIX/../version" ]; then
 	#proton_version=$(cat "$WINEPREFIX/../version")	# Auto selection (not yet checked)
   #proton_version=$steam_dir/compatibilitytools.d/Proton-$(cat "$WINEPREFIX/../version")                           ###########
   proton_version=$steam_dir/compatibilitytools.d/$(cat "$WINEPREFIX/../version")
-fi
-
-if [[ $proton_version == "" ]] || [[ $1 == "-p" ]]; then
-  echo -e "\nChoose a Proton version used for configuration:"
-
-  versions_directory=$steam_dir/compatibilitytools.d
-  if [ ! -d "$versions_directory" ]; then
-    echo "error: No path to proton versions" >&2; exit 1
-  fi
-  versions="$versions_directory/*"
-  version_count=0
-  for proton_version in ${versions[@]}; do
-    echo "$version_count. ${proton_version##*/}"
-    version_count=$((version_count+1))
-  done
-
-  read -p 'Pick proton version by index: ' proton_choice
-
-  if ! [[ $proton_choice =~ $re ]] ; then
-    echo "error: Not a valid number" >&2; exit 1
-    elif [ $proton_choice -ge $version_count ] ; then
-    echo "error: Not a valid number" >&2; exit 1
-  fi
-
-  idx=0
-  for version in ${versions[@]}; do
-    if (( $idx == $proton_choice )); then
-      proton_version=$version
-      break
+  if ! [ -d $proton_version ]; then
+    proton_version=$steam_dir/compatibilitytools.d/Proton-$(cat "$WINEPREFIX/../version")
+    if ! [ -d $proton_version ]; then
+      echo -e "\n$proton_version"
+      echo "error: Failed to locate the proton install directory." # >&2; exit 1
     fi
-    idx=$((idx+1))
-  done
+  fi
+fi
+echo -e "\nSuccessfully selected proton install dir:"
+echo -e "$proton_version"
+
+if [[ $proton_version == "" ]] || [[ $1 || $3 == "-p" ]]; then
+  versions_directory=$steam_dir/compatibilitytools.d
+  
+  if [[ $1 == "-p" ]]; then
+    if ! [[ $2 == "" ]]; then
+      proton_version="$versions_directory/$2"
+      skip=1
+    fi
+  fi
+  if [[ $3 == "-p" ]]; then
+    if ! [[ $4 == "" ]]; then
+      proton_version="$versions_directory/$4"
+      skip=1
+    fi
+  fi
+
+  if [[ $skip == 0 ]]; then
+    echo -e "\nChoose a Proton version used for configuration:"
+
+    if [ ! -d "$versions_directory" ]; then
+      echo "error: No path to proton versions" >&2; exit 1
+    fi
+    versions="$versions_directory/*"
+    version_count=0
+    for proton_version in ${versions[@]}; do
+      echo "$version_count. ${proton_version##*/}"
+      version_count=$((version_count+1))
+    done
+
+    read -p 'Pick proton version by index: ' proton_choice
+
+    if ! [[ $proton_choice =~ $re ]] ; then
+      echo "error: Not a valid number" >&2; exit 1
+      elif [ $proton_choice -ge $version_count ] ; then
+      echo "error: Not a valid number" >&2; exit 1
+    fi
+
+    idx=0
+    for version in ${versions[@]}; do
+      if (( $idx == $proton_choice )); then
+        proton_version=$version
+        break
+      fi
+      idx=$((idx+1))
+    done
+  fi
 fi
 
-echo "\nProton version is: ${proton_version##*/}"
+echo -e "\nProton version is: ${proton_version##*/}"
 #echo -e "\nProton version is: ${proton_version}"
 
 ### Launcher selection
 
-echo -e "\nChoose a third party launcher for installation:\n\
+if [[ $5 == "-s" ]] || [[ $3 == "-s" ]]; then
+  if [[ $5 == "-s" ]]; then
+    if ! [[ $6 == "" ]]; then
+      exe_choice=$6
+    fi
+  elif ! [[ $4 == "" ]]; then
+    exe_choice=$4
+  else
+    echo -e "\nInvalid usage of -s flag: Provide the selection 1-5." >&2; exit 1
+  fi
+  if [[ $exe_choice == 4 ]]; then
+    if [[ $5 == "-s" ]]; then
+      #if ! [[ $7 == "" ]]; then
+      if [ -f $7 ]; then
+        exe=$7
+      else
+        echo "Current dir: $dir"
+        echo -e "\nInvalid usage of -s flag: No executable provided." >&2; exit 1
+      fi
+    elif [[ $3 == "-s" ]]; then
+      #if ! [[ $5 == "" ]]; then
+      if [ -f $5 ]; then
+        exe=$5
+      else
+        echo "Current dir: $dir"
+        echo -e "\nInvalid usage of -s flag: No executable provided." >&2; exit 1
+      fi
+    fi
+  fi
+else
+
+  echo -e "\nChoose a third party launcher for installation:\n\
 1. Origin\n\
 2. Ubisoft Connect\n\
 3. Games for Windows Live\n\
-4. Custom file location"
-read -ep "Pick a launcher by index: " exe_choice						#add a selection filter
+4. Custom file location\n\
+5. Just fix GFWL endless install for steam"
+  read -ep "Pick a launcher by index: " exe_choice						#add a selection filter
+fi
 
 if ! [[ $exe_choice =~ $re ]] ; then
-   echo "error: Not a valid number" >&2; exit 1
+  echo "error: Not a valid number" >&2; exit 1
 fi
 
 
@@ -160,15 +227,18 @@ case $exe_choice in
     ;;
   4)
     echo Launcher: Custom
+    ;;
+  5)
+    echo Launcher: Just fix GFWL endless install for steam.
 esac
 echo -e "Current dir: $dir\n"
 
-read -p "Proceed with installation? [y/N]: " final_selectiton
+read -p "Proceed with installation? [Y/n]: " final_selectiton
 case "$final_selectiton" in
- [yY] | [yY][eE][sS])
-    ;;
- [nN] | [nN][oO] | *)
+ [nN] | [nN][oO])
     echo -e "\nerror: Aborted by user" >&2; exit 1
+    ;;
+ [yY] | [yY][eE][sS] | *)
     ;;
 esac
 
@@ -182,7 +252,6 @@ fi
 case "$exe_choice" in
 
   1)	#Origin
-    #exe="$dir/files/OriginSetup.exe"
     exe="$dir/files/OriginThinSetup.exe"
     if [ ! -f "$exe" ]; then
       cd $dir/files
@@ -206,14 +275,16 @@ case "$exe_choice" in
 
   3)	#GFWL
     exe="$dir/files/gfwlivesetup.exe"
-    msi1="$dir/files/xliveredist.msi"
-    msi2="$dir/files/gfwlclient.msi"
+    xliveredist="$dir/files/xliveredist.msi"
+    gfwlclient="$dir/files/gfwlclient.msi"
+    physx="$dir/files/PhysX-9.14.0702.msi"
+
     if [ ! -f "$exe" ]; then
       if [ -f "$dir/files/gfwlivesetup.zip" ]; then
-      cd $dir/files
-      unzip gfwlivesetup.zip
-      else
-      echo -e "\nPlease provide a gfwlivesetup.zip or gfwlivesetup.exe file."
+        cd $dir/files
+        unzip gfwlivesetup.zip
+        else
+        echo -e "\nPlease provide a gfwlivesetup.zip or gfwlivesetup.exe file."
       fi
     fi
     #if [ -d $old_launcher ] ;then                                                                                      #Add old launcher deletion
@@ -222,50 +293,66 @@ case "$exe_choice" in
     ;;
 
   4)
-    cd /
-    read -ep "Provide a full path to the custom file: " exe
+    if [[ $exe == "" ]]; then
+      cd /
+      read -ep "Provide a full path to the custom file: " exe
+    fi
     ;;
-
+  5)
+    ;;
   *)
     echo "error: Not a valid number" >&2; exit 1
     ;;
 esac
 
-if [ -f "$exe" ]; then
-  echo "File found: $exe"
-  echo -e "\nInstalling"
+if ! [[ $exe_choice =~ "5" ]]; then
+  if [ -f "$exe" ] ; then
+    echo "File found: $exe"
+    #echo -e "\nInstalling"
   else 
-  echo "error: couldn't find the installer" >&2; exit 1
+    echo "error: couldn't find the installer" >&2; exit 1
+  fi
 fi
 
+### Runner autoselection
+
 #runner="$proton_version/proton"
-#runner="$proton_version/dist/bin/wine64"
+
 runner="$proton_version/files/bin/wine"    #for proton 7.9 and up
-STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" 
+if ! [ -f "$runner" ]; then
+  runner="$proton_version/dist/bin/wine"
+  if ! [ -f "$runner" ]; then
+    runner="$proton_version/bin/wine"    #for proton 5 (?)
+    if ! [ -f "$runner" ]; then
+      echo -e "\n$runner"
+      echo "error: Failed to locate the proton runner directory." >&2; exit 1
+    fi
+  fi
+fi
+echo -e "\nSuccessfully selected proton runner dir:"
+echo -e "$runner\n"
 
-if [[ $exe_choice =~ 3 ]]; then
+#TEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" 
 
-  #protontricks $appid dotnet45
-  #protontricks $appid dotnet40_kb2468871
+###if [[ $exe_choice =~ 3 ]]; then
+
+
   #WINE=~/.local/share/Steam/compatibilitytools.d/GE-Proton7-10/files/bin/wine WINEPREFIX=~/.local/share/Steam/steamapps/compatdata/315440/pfx winetricks dotnet40_kb2468871
-  #echo -e "\ndotnet45 installed."
-  #read -p "Press enter to continue installation. " agreement
 
-
-  protontricks $appid d3dx9
-  echo -e "\nd3dx9 installed."
-  read -p "Press enter to continue installation. " agreement
 
                                                                                                                             # ADD Physics Installer
-  protontricks $appid gfw
-  echo -e "\nGFW installed."
-  read -p "Press enter to continue. " agreement
+   #STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$runner" run $dir/files/gfwlivesetup.exe
+##  echo -e "STEAM_COMPAT_DATA_PATH=$steamapps/compatdata/$appid WINEPREFIX=$steamapps/compatdata/$appid/pfx /home/$USER/.cache/protontricks/proton/Proton\ 5.0/bin/wine run $dir/files/gfwlivesetup.exe"
+#  protontricks $appid gfw
+##  echo -e "\n\nGFW installed.\n"
+##  read -p "Press enter to continue. " agreement
 
   #STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$runner" run $dir/files/PhysX-9.14.0702.msi
-  #"$runner" run "$dir/files/PhysX-9.14.0702.msi"
-  protontricks $appid physx
-  echo -e "\nPhysX installed."
-  read -p "Press enter to continue. " agreement
+##  STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "/home/$USER/.cache/protontricks/proton/Proton 5.0/bin/wine" run $dir/files/PhysX-9.14.0702.msi
+#  "$runner" run "$dir/files/PhysX-9.14.0702.msi"
+#  protontricks $appid physx
+##  echo -e "\n\nPhysX installed.\n"
+##  read -p "Press enter to continue. " agreement
 
   #"$runner" $msi1
   #echo -e "\nxliveredist.msi installed."
@@ -274,10 +361,106 @@ if [[ $exe_choice =~ 3 ]]; then
   #"$runner" $msi2
   #echo -e "\ngfwlclient.msi installed."
   #read -p "Press enter to continue. " agreement
-fi
-"$runner" $exe
+###fi
 
-if [[ $exe_choice =~ 3 ]]; then
+read -p "Choose install method for external programs [Runner, wineprefix, custom (proton5 fix)]: " runner_choice
+case "$runner_choice" in
+  [wW] | [wW][iI][nN][eE][pP][rR][eE][fF][iI][xX])
+    #WINE="$protonpath/files/bin/wine"
+    #WINE="$HOME/.cache/protontricks/proton/${proton_version##*/}/bin/wine"
+    WINE="$runner"
+    STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid"
+    WINEPREFIX="$steamapps/compatdata/$appid/pfx"
+    
+    if [[ $exe_choice =~ 3 ]]; then
+
+      winetricks d3dx9
+#      "$HOME/.cache/protontricks/proton/${proton_version##*/}/bin/wine" d3dx9
+      echo -e "\n\nd3dx9 installation finished.\n"
+      read -p "Press enter to continue. " agreement
+
+      winetricks dotnet40_kb2468871
+#      winetricks dotnet45
+#      "$HOME/.cache/protontricks/proton/${proton_version##*/}/bin/wine" dotnet45
+      echo -e "\n\ndotnet45 installation finished.\n"
+      read -p "Press enter to continue. " agreement
+
+      winetricks run $physx
+#      "$HOME/.cache/protontricks/proton/${proton_version##*/}/bin/wine" run $physx
+      echo -e "\n\nphysx installation finished.\n"
+      read -p "Press enter to continue. " agreement
+    fi
+
+    winetricks run $exe
+#    "$HOME/.cache/protontricks/proton/${proton_version##*/}/bin/wine" run $exe
+    echo -e "\n\nwinetricks run \"$exe\" finished.\n"
+    read -p "Press enter to continue. " agreement
+
+    if [[ $exe_choice =~ 3 ]]; then
+
+      winetricks run $xliveredist
+#      "$HOME/.cache/protontricks/proton/${proton_version##*/}/bin/wine" run $xliveredist
+      echo -e "\n\nxliveredist installation finished.\n"
+      read -p "Press enter to continue. " agreement
+
+      winetricks run $gfwlclient
+#      "$HOME/.cache/protontricks/proton/${proton_version##*/}/bin/wine" run $gfwlclient
+      echo -e "\n\ngfwlclient installation finished.\n"
+      read -p "Press enter to continue. " agreement
+    fi
+    ##echo -e "STEAM_COMPAT_DATA_PATH=\"$STEAM_COMPAT_DATA_PATH\" WINEPREFIX=\"$WINEPREFIX\" \"$runner\" \"$exe\""
+    ;;
+
+  [cC] | [cC][uU][sS][tT][oO][mM])
+    STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid"
+    WINEPREFIX="$steamapps/compatdata/$appid/pfx"
+    "/home/$USER/.cache/protontricks/proton/Proton 5.0/bin/wine" $exe
+    echo -e "STEAM_COMPAT_DATA_PATH=\"$STEAM_COMPAT_DATA_PATH\"\
+	WINEPREFIX=\"$WINEPREFIX\"\
+	\"/home/$USER/.cache/protontricks/proton/Proton 5.0/bin/wine\"\
+	\"$exe\"" 
+    ;;
+
+  [rR] | [rR][uU][nN][nN][eE][rR] | *)
+    STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid"
+    WINEPREFIX="$steamapps/compatdata/$appid/pfx"
+
+    if [[ $exe_choice =~ 3 ]]; then
+
+      protontricks $appid d3dx9
+      echo -e "\n\nd3dx9 installation finished.\n"
+      read -p "Press enter to continue. " agreement
+
+      protontricks $appid winxp
+      #protontricks $appid dotnet40_kb2468871
+      protontricks $appid dotnet45
+      protontricks $appid win7
+      echo -e "\n\ndotnet45 installation finished.\n"
+      read -p "Press enter to continue. " agreement
+
+      STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$runner" $physx
+      echo -e "\n\nphysx installation finished.\n"
+      read -p "Press enter to continue. " agreement
+    fi
+
+    "$runner" $exe
+    echo -e "\n\n\"$runner\" \"$exe\" finished.\n"
+    read -p "Press enter to continue. " agreement
+
+    if [[ $exe_choice =~ 3 ]]; then
+
+      "$runner" $xliveredist
+      echo -e "\n\nxliveredist installation finished.\n"
+      read -p "Press enter to continue. " agreement
+
+      "$runner" $gfwlclient
+      echo -e "\n\ngfwlclient installation finished.\n"
+      read -p "Press enter to continue. " agreement
+    fi
+    ;;
+esac
+
+if [[ $exe_choice =~ 3 ]] || [[ $exe_choice =~ 5 ]]; then
   protontricks $appid win7
   # Fix for repeated GFWL install attempts in steam at startup
   protontricks -c 'wine cmd /C reg add "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam\Apps\$appid" /v "Games For Windows Live Marketplace" /t REG_DWORD /d "1"' $appid
