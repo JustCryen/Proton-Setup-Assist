@@ -100,13 +100,18 @@ if [ -f "$WINEPREFIX/../version" ]; then
   if ! [ -d $proton_version ]; then
     proton_version=$steam_dir/compatibilitytools.d/Proton-$(cat "$WINEPREFIX/../version")
     if ! [ -d $proton_version ]; then
-      echo -e "\n$proton_version"
-      echo "error: Failed to locate the proton install directory." # >&2; exit 1
+      echo -e "\nerror: Failed to automatically locate the proton install directory, trying by name." # >&2; exit 1
+      echo -e "$proton_version"
+      proton_version=""
+    else
+      echo -e "\nSuccessfully selected proton install dir:"
+      echo -e "$proton_version"
     fi
+  else
+    echo -e "\nSuccessfully selected proton install dir:"
+    echo -e "$proton_version"
   fi
 fi
-echo -e "\nSuccessfully selected proton install dir:"
-echo -e "$proton_version"
 
 if [[ $proton_version == "" ]] || [[ $1 || $3 == "-p" ]]; then
   versions_directory=$steam_dir/compatibilitytools.d
@@ -124,7 +129,15 @@ if [[ $proton_version == "" ]] || [[ $1 || $3 == "-p" ]]; then
     fi
   fi
 
-  if [[ $skip == 0 ]]; then
+  if [[ $skip == 1 ]]; then
+    if ! [ -d $proton_version ]; then
+      echo -e "\nerror: Failed to locate the proton install directory." #>&2; exit 1
+      echo -e "$proton_version" >&2; exit 1
+    else
+      echo -e "\nSuccessfully selected proton install dir:"
+      echo -e "$proton_version"
+    fi
+  else
     echo -e "\nChoose a Proton version used for configuration:"
 
     if [ ! -d "$versions_directory" ]; then
