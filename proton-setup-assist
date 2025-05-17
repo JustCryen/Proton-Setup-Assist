@@ -187,7 +187,7 @@ if [[ $5 == "-s" ]] || [[ $3 == "-s" ]]; then
   if [[ $exe_choice == 4 ]]; then
     if [[ $5 == "-s" ]]; then
       #if ! [[ $7 == "" ]]; then
-      if [ -f $7 ]; then
+      if [ -f "$7" ]; then
         exe=$7
       else
         echo "Current dir: $dir"
@@ -456,7 +456,7 @@ case "$runner_choice" in
       read -p "Press enter to continue. " agreement
     fi
 
-    "$runner" $exe
+    STEAM_COMPAT_DATA_PATH="$steamapps/compatdata/$appid" WINEPREFIX="$steamapps/compatdata/$appid/pfx" "$runner" $exe
     echo -e "\n\n\"$runner\" \"$exe\" finished.\n"
     read -p "Press enter to continue. " agreement
 
