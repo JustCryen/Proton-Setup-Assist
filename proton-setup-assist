@@ -18,7 +18,7 @@ if [ -d $HOME/.local/steam/steamapps ] ; then
         echo "Couldn't find Steam dir"  >&2; exit 1
     fi
 fi
-echo -e "Steam location \n$steam_dir\n"
+echo -e "\e[0;37mSteam location\e[0m\n$steam_dir\n"
 
 ### Game selection
 
@@ -30,7 +30,7 @@ if ! [[ $1 == "-i" ]]; then
   fi
 
   cd $steam_dir/steamapps/compatdata
-  read -ep 'Insert a valid APPID: ' appid
+  read -ep 'Insert a valid APPID: ' appid && echo ''
 else
   appid="$2"
 fi
@@ -44,15 +44,17 @@ if ! [[ $appid =~ $re ]] ; then
 fi
 
 found_libs=`grep path $steam_dir/steamapps/libraryfolders.vdf | sed -e 's/\t\t//g' -e 's/path//' -e 's/"//g'`
-echo -e "\nFound libraries \n$found_libs\n"
+echo -e "\e[0;37mFound libraries\e[0m\n$found_libs\n"
 
 for steam in ${found_libs[@]}; do
   game_check=`find ${steam}/steamapps/ -maxdepth 1 -type f -name '*.acf' -exec sed -n '/"appid\|"name"/{s/.*"\([^"]*\)"$/\1|/;H};${x;s/\n//g;p}' {} \; | column -t -s '|' | grep -w $appid`
-  game_name=`echo $game_check | sed 's/^\w*\ *//'`
-  game_id=`echo $game_check | grep -o '^\S*'`
-  if [[ $game_id =~ $appid ]]; then
-    game=$game_name
-    working_lib=${steam}
+  if [[ $game_check != '' ]]; then
+    game_name=`echo $game_check | sed 's/^\w*\ *//'`
+    game_id=`echo $game_check | grep -o '^\S*'`
+    if [[ $game_id =~ $appid ]]; then
+      game=$game_name
+      working_lib=${steam}
+    fi
   fi
 done
 
@@ -60,9 +62,10 @@ steamapps=$working_lib/steamapps
 protonpath=$working_lib/compatibilitytools.d/${proton_version##*/}
 
 if [ -d $steamapps/compatdata/$appid ] ; then
-  echo -e "Choosen library with prefix: $steamapps/compatdata/$appid\n"
+  echo -e "\e[0;37mChoosen library with prefix\e[0m\n$steamapps/compatdata/$appid\n"
+  echo -e "\e[0;37mGame\e[0m\n$game_name\n"
   WINEPREFIX="$steamapps/compatdata/$appid/pfx"
-  else
+else
   echo -e "\nerror: Wrong path to game prefix" >&2; exit 1
 fi
 
@@ -104,11 +107,11 @@ if [ -f "$WINEPREFIX/../version" ]; then
       echo -e "$proton_version"
       proton_version=""
     else
-      echo -e "\nSuccessfully selected proton install dir:"
+      echo -e "\n\e[0;37mSuccessfully selected proton install dir\e[0m"
       echo -e "$proton_version"
     fi
   else
-    echo -e "\nSuccessfully selected proton install dir:"
+    echo -e "\n\e[0;37mSuccessfully selected proton install dir\e[0m"
     echo -e "$proton_version"
   fi
 fi
