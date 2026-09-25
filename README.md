@@ -16,7 +16,7 @@
 
 ### Dependencies
 
-- sed and awk (for now)
+- sed
 - protontricks
 
 ### Todo

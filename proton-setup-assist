@@ -47,7 +47,7 @@ found_libs=`grep path $steam_dir/steamapps/libraryfolders.vdf | sed -e 's/\t\t//
 echo -e "\nFound libraries \n$found_libs\n"
 
 for steam in ${found_libs[@]}; do
-  game_check=`find ${steam}/steamapps/ -maxdepth 1 -type f -name '*.acf' -exec awk -F '"' '/"appid|name/{ printf $4 "|" } END { print "" }' {} \; | column -t -s '|' | grep -w $appid`
+  game_check=`find ${steam}/steamapps/ -maxdepth 1 -type f -name '*.acf' -exec sed -n '/"appid\|"name"/{s/.*"\([^"]*\)"$/\1|/;H};${x;s/\n//g;p}' {} \; | column -t -s '|' | grep -w $appid`
   game_name=`echo $game_check | sed 's/^\w*\ *//'`
   game_id=`echo $game_check | grep -o '^\S*'`
   if [[ $game_id =~ $appid ]]; then
