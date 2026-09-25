@@ -3,6 +3,20 @@
 echo -e "Third party launcher install script for Proton.\n" #Created by Cryen / github.com/JustCryen
 dir=$(pwd)
 
+declare default black red green yellow blue purple cyan gray
+#if [[ $(tput colors) == 256 ]]; then
+if [[ $COLORTERM =~ ^(truecolor|24bit)$ ]]; then
+  default='\e[0m'
+  black='\e[0;30m'
+  red='\e[0;31m'
+  green='\e[0;32m'
+  yellow='\e[0;33m'
+  blue='\e[0;34m'
+  purple='\e[0;35m'
+  cyan='\e[0;36m'
+  gray='\e[0;37m'
+fi
+
 ### Find steam location
 
 if [ -d $HOME/.local/steam/steamapps ] ; then
@@ -18,7 +32,7 @@ if [ -d $HOME/.local/steam/steamapps ] ; then
         echo "Couldn't find Steam dir"  >&2; exit 1
     fi
 fi
-echo -e "\e[0;37mSteam location\e[0m\n$steam_dir\n"
+echo -e $gray"Steam location"$default"\n$steam_dir\n"
 
 ### Game selection
 
@@ -39,12 +53,12 @@ re='^[0-9]+$'
 if ! [[ $appid =~ $re ]] ; then
   appid=`echo $appid | sed 's/.$//'`
   if ! [[ $appid =~ $re ]] ; then
-    echo "error: Not a valid number" >&2; exit 1
+    echo -e $red"Error:"$default" Not a valid number" >&2; exit 1
   fi
 fi
 
 found_libs=`grep path $steam_dir/steamapps/libraryfolders.vdf | sed -e 's/\t\t//g' -e 's/path//' -e 's/"//g'`
-echo -e "\e[0;37mFound libraries\e[0m\n$found_libs\n"
+echo -e $gray"Found libraries"$default"\n$found_libs\n"
 
 for steam in ${found_libs[@]}; do
   game_check=`find ${steam}/steamapps/ -maxdepth 1 -type f -name '*.acf' -exec sed -n '/"appid\|"name"/{s/.*"\([^"]*\)"$/\1|/;H};${x;s/\n//g;p}' {} \; | column -t -s '|' | grep -w $appid`
@@ -62,11 +76,11 @@ steamapps=$working_lib/steamapps
 protonpath=$working_lib/compatibilitytools.d/${proton_version##*/}
 
 if [ -d $steamapps/compatdata/$appid ] ; then
-  echo -e "\e[0;37mChoosen library with prefix\e[0m\n$steamapps/compatdata/$appid\n"
-  echo -e "\e[0;37mGame\e[0m\n$game_name\n"
+  echo -e $gray"Choosen library with prefix"$default"\n$steamapps/compatdata/$appid\n"
+  echo -e $gray"Game"$default"\n$game_name\n"
   WINEPREFIX="$steamapps/compatdata/$appid/pfx"
 else
-  echo -e "\nerror: Wrong path to game prefix" >&2; exit 1
+  echo -e \n$red"Error:"$default" Wrong path to game prefix" >&2; exit 1
 fi
 
 #for list_libs in ${found_libs[@]}; do                     # neat listing of found libraries
@@ -76,20 +90,20 @@ fi
 
 ### Clear prefix
 
-#echo ""
 read -p "Clear prefix? [y/N]: " clear_prefix
 
 case "$clear_prefix" in
  [yY] | [yY][eE][sS])
     rm -rf  "$steamapps/compatdata/$appid"
     if [ -d "$steamapps/compatdata/$appid" ] ; then
-        echo -e "Error, prefix couldn't be cleared"; exit 0
+        echo -e $red"Error:"$default" prefix couldn't be cleared"; exit 0
     else
-        echo -e "Prefix cleared \nGo and run a game at least once to create it again"; exit 0
+        echo -e $green"Prefix cleared"$default
+	echo -e "Go and run a game at least once to create it again"; exit 0
     fi
     ;;
  [nN] | [nN][oO] | *)
-    echo Ignored
+    echo -e $yellow"Ignored"$default
     ;;
 esac
 
@@ -103,15 +117,15 @@ if [ -f "$WINEPREFIX/../version" ]; then
   if ! [ -d $proton_version ]; then
     proton_version=$steam_dir/compatibilitytools.d/Proton-$(cat "$WINEPREFIX/../version")
     if ! [ -d $proton_version ]; then
-      echo -e "\nerror: Failed to automatically locate the proton install directory, trying by name." # >&2; exit 1
+      echo -e \n$red"Error:"$default" Failed to automatically locate the proton install directory, trying by name." # >&2; exit 1
       echo -e "$proton_version"
       proton_version=""
     else
-      echo -e "\n\e[0;37mSuccessfully selected proton install dir\e[0m"
+      echo -e $gray"\nSuccessfully selected proton install dir"$default
       echo -e "$proton_version"
     fi
   else
-    echo -e "\n\e[0;37mSuccessfully selected proton install dir\e[0m"
+    echo -e $gray"\nSuccessfully selected proton install dir"$default
     echo -e "$proton_version"
   fi
 fi
@@ -134,7 +148,7 @@ if [[ $proton_version == "" ]] || [[ $1 || $3 == "-p" ]]; then
 
   if [[ $skip == 1 ]]; then
     if ! [ -d $proton_version ]; then
-      echo -e "\nerror: Failed to locate the proton install directory." #>&2; exit 1
+      echo -e \n$red"Error:"$default" Failed to locate the proton install directory." #>&2; exit 1
       echo -e "$proton_version" >&2; exit 1
     else
       echo -e "\nSuccessfully selected proton install dir:"
@@ -144,7 +158,7 @@ if [[ $proton_version == "" ]] || [[ $1 || $3 == "-p" ]]; then
     echo -e "\nChoose a Proton version used for configuration:"
 
     if [ ! -d "$versions_directory" ]; then
-      echo "error: No path to proton versions" >&2; exit 1
+      echo -e $red"Error:"$default" No path to proton versions" >&2; exit 1
     fi
     versions="$versions_directory/*"
     version_count=0
@@ -156,9 +170,9 @@ if [[ $proton_version == "" ]] || [[ $1 || $3 == "-p" ]]; then
     read -p 'Pick proton version by index: ' proton_choice
 
     if ! [[ $proton_choice =~ $re ]] ; then
-      echo "error: Not a valid number" >&2; exit 1
-      elif [ $proton_choice -ge $version_count ] ; then
-      echo "error: Not a valid number" >&2; exit 1
+      echo -e $red"Error:"$default" Not a valid number" >&2; exit 1
+    elif [ $proton_choice -ge $version_count ] ; then
+      echo -e $red"Error:"$default" Not a valid number" >&2; exit 1
     fi
 
     idx=0
@@ -173,7 +187,6 @@ if [[ $proton_version == "" ]] || [[ $1 || $3 == "-p" ]]; then
 fi
 
 echo -e "\nProton version is: ${proton_version##*/}"
-#echo -e "\nProton version is: ${proton_version}"
 
 ### Launcher selection
 
@@ -218,7 +231,7 @@ else
 fi
 
 if ! [[ $exe_choice =~ $re ]] ; then
-  echo "error: Not a valid number" >&2; exit 1
+  echo -e $red"Error:"$default" Not a valid number" >&2; exit 1
 fi
 
 
@@ -252,7 +265,7 @@ echo -e "Current dir: $dir\n"
 read -p "Proceed with installation? [Y/n]: " final_selectiton
 case "$final_selectiton" in
  [nN] | [nN][oO])
-    echo -e "\nerror: Aborted by user" >&2; exit 1
+    echo -e \n$red"Error:"$default" Aborted by user" >&2; exit 1
     ;;
  [yY] | [yY][eE][sS] | *)
     ;;
@@ -326,7 +339,7 @@ if ! [[ $exe_choice =~ "5" ]]; then
     echo "File found: $exe"
     #echo -e "\nInstalling"
   else 
-    echo "error: couldn't find the installer" >&2; exit 1
+    echo -e $red"Error:"$default" couldn't find the installer" >&2; exit 1
   fi
 fi
 
@@ -341,7 +354,7 @@ if ! [ -f "$runner" ]; then
     runner="$proton_version/bin/wine"    #for proton 5 (?)
     if ! [ -f "$runner" ]; then
       echo -e "\n$runner"
-      echo "error: Failed to locate the proton runner directory." >&2; exit 1
+      echo -e $red"Error:"$default" Failed to locate the proton runner directory." >&2; exit 1
     fi
   fi
 fi
@@ -482,4 +495,4 @@ if [[ $exe_choice =~ 3 ]] || [[ $exe_choice =~ 5 ]]; then
   protontricks -c 'wine cmd /C reg add "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam\Apps\$appid" /v "Games For Windows Live Marketplace" /t REG_DWORD /d "1"' $appid
 fi
 
-echo -e "\nInstall complete!"
+echo -e $green"\nInstall complete!"$default
